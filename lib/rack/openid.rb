@@ -55,11 +55,17 @@ module Rack #:nodoc:
     class TimeoutResponse #:nodoc:
       include ::OpenID::Consumer::Response
       STATUS = :failure
+      def initialize(original_exception)
+        @exception = original_exception
+      end
     end
 
     class MissingResponse #:nodoc:
       include ::OpenID::Consumer::Response
       STATUS = :missing
+      def initialize(original_exception)
+        @exception = original_exception
+      end
     end
 
     # :stopdoc:
@@ -127,7 +133,7 @@ module Rack #:nodoc:
           url = open_id_redirect_url(req, oidreq, params["trust_root"], params["return_to"], params["method"], immediate)
           return redirect_to(url)
         rescue ::OpenID::OpenIDError, Timeout::Error => e
-          env[RESPONSE] = MissingResponse.new
+          env[RESPONSE] = MissingResponse.new(e)
           return @app.call(env)
         end
       end
@@ -270,8 +276,8 @@ module Rack #:nodoc:
 
       def timeout_protection_from_identity_server
         yield
-      rescue Timeout::Error
-        TimeoutResponse.new
+      rescue Timeout::Error => e
+        TimeoutResponse.new(e)
       end
   end
 end
